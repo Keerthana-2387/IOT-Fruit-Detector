@@ -16,23 +16,41 @@
         let model, webcam, labelContainer, maxPredictions;
         let lastValue = -1;
 
-        async function init() {
-            const modelURL = URL + "model.json";
-            const metadataURL = URL + "metadata.json";
-            model = await tmImage.load(modelURL, metadataURL);
-            maxPredictions = model.getTotalClasses();
+       async function init() {
+    const modelURL = URL + "model.json";
+    const metadataURL = URL + "metadata.json";
 
-            webcam = new tmImage.Webcam(200, 200, true);
-            await webcam.setup();
-            await webcam.play();
-            window.requestAnimationFrame(loop);
+    model = await tmImage.load(modelURL, metadataURL);
+    maxPredictions = model.getTotalClasses();
 
-            document.getElementById("webcam-container").appendChild(webcam.canvas);
-            labelContainer = document.getElementById("label-container");
-            for (let i = 0; i < maxPredictions; i++) {
-                labelContainer.appendChild(document.createElement("div"));
-            }
-        }
+    const flip = true; 
+    webcam = new tmImage.Webcam(200, 200, flip); 
+    
+    // Explicitly wait for setup and then manually trigger play
+    await webcam.setup(); 
+    
+    // Some mobile browsers require this specific call to trigger the prompt
+    const playPromise = webcam.play();
+    if (playPromise !== undefined) {
+        playPromise.then(_ => {
+            console.log("Camera started successfully");
+        }).catch(error => {
+            console.error("Camera failed to start:", error);
+            alert("Please enable camera permissions in your browser settings.");
+        });
+    }
+
+    window.requestAnimationFrame(loop);
+
+    // Ensure the canvas is added to the container
+    const container = document.getElementById("webcam-container");
+    container.innerHTML = ""; // Clear "Loading..." messages if any
+    container.appendChild(webcam.canvas);
+    
+    // Important for mobile: force the internal video element to play
+    webcam.webcam.setAttribute('playsinline', true); 
+    webcam.webcam.setAttribute('muted', true);
+}
 
         async function loop() {
             webcam.update();
